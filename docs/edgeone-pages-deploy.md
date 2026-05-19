@@ -149,6 +149,28 @@ git push
 
 ## 常见问题
 
+### Q0：拿到的 URL 带 `?eo_token=...&eo_time=...`，不带 token 访问报 401
+
+**现象**：EdgeOne 控制台给你的预览链接形如：
+```
+https://teamspace-poster-xxxxxx.edgeone.cool?eo_token=xxx&eo_time=xxx
+```
+直接去掉 `?...` 部分访问，返回 `401 Authorization Required` + `X-EOP-MSG: eo_time missing`。
+
+**原因**：项目当前处于「预览/草稿」模式，仅授权访问。`eo_token` 是 30 分钟左右过期的临时凭证。
+
+**解决**：
+1. 进入 EdgeOne 控制台 → 你的项目
+2. 找 「设置」 → 「访问控制」 / 「部署」 → 「环境」 → 「生产环境」
+3. 把项目可见性切为 **「公开」/「Public」**（不同 UI 版本入口位置略不同）
+4. 保存 → 1 分钟内 CDN 同步生效
+5. 不带 token 重新访问，应该返回 200 + 海报页面
+
+完成切换后，对外分享的链接是去掉所有 query 参数的那个，例如：
+```
+https://teamspace-poster-tqkcq8qk0j.edgeone.cool
+```
+
 ### Q1：必须备案吗？
 **不需要**。`xxx.edgeone.app` 是腾讯云提供的二级域名，免备案。只有你想绑定自己的域名（如 `poster.banbanzhang.com`）时才要备案。
 
