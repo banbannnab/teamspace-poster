@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teamspace 上新小报生成器 v3</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<style>
+  :root {
+    --brand-50:  #F5F2FF;
+    --brand-100: #EAE4FE;
+    --brand-200: #D5C9FD;
+    --brand-300: #B8A4FA;
+    --brand-400: #9A7FF6;
+    --brand-500: #7C5BF2;
+    --brand-600: #6B4FE8;
+    --brand-700: #5538D6;
+    --bg: #F6F4FB;
+    --panel: #FFFFFF;
+    --border: #ECE9F5;
+    --border-strong: #D9D3EC;
+    --text: #1F1A36;
+    --text-sub: #6A6585;
+    --text-mute: #A7A3BB;
+    --radius: 14px;
+    --radius-sm: 8px;
+    --shadow-sm: 0 1px 2px rgba(20,10,60,.04);
+    --shadow:    0 2px 6px rgba(20,10,60,.05), 0 8px 24px rgba(20,10,60,.06);
+    --shadow-lg: 0 12px 32px rgba(40,20,90,.18);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+  .gc-1 { --gc: #6B4FE8; --gc-soft: #EFEAFE; }
+  .gc-2 { --gc: #16A0C0; --gc-soft: #E5F6FA; }
+  .gc-3 { --gc: #FF7A45; --gc-soft: #FFEFE7; }
+  .gc-4 { --gc: #E83E8C; --gc-soft: #FCEAF1; }
+  .gc-5 { --gc: #16A085; --gc-soft: #E0F4EF; }
+  .gc-6 { --gc: #F39C12; --gc-soft: #FDF1DD; }
+
+  .app { display: grid; grid-template-columns: 380px 1fr; height: 100vh; }
+
+  .sidebar {
+    background: var(--panel); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 18px 20px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .logo {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
+    border-radius: 9px; color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+    box-shadow: 0 4px 12px rgba(108, 79, 232, .35);
+  }
+  .sidebar-header .title { font-size: 15px; font-weight: 600; }
+  .sidebar-header .sub { font-size: 11px; color: var(--text-mute); margin-top: 2px; }
+  .icon-btn {
+    margin-left: auto; width: 28px; height: 28px;
+    background: var(--brand-50); border: none; border-radius: 7px;
+    color: var(--brand-600); cursor: pointer; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-btn:hover { background: var(--brand-100); }
+
+  .nav { flex: 1; overflow-y: auto; padding: 12px 12px 0; }
+  .nav::-webkit-scrollbar { width: 6px; }
+  .nav::-webkit-scrollbar-thumb { background: #DDD8EC; border-radius: 3px; }
+
+  .nav-item {
+    background: #FAF8FE; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); margin-bottom: 8px;
+    overflow: hidden; transition: box-shadow .15s;
+  }
+  .nav-item.open { box-shadow: var(--shadow-sm); background: #fff; }
+  .nav-head {
+    padding: 12px 14px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none;
+  }
+  .nav-head .lt { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; }
+  .nav-head .arrow { color: var(--text-mute); transition: transform .2s; font-size: 11px; }
+  .nav-item.open .arrow { transform: rotate(90deg); }
+  .nav-body { display: none; padding: 4px 14px 14px; border-top: 1px solid var(--border); }
+  .nav-item.open .nav-body { display: block; }
+
+  .sidebar-footer {
+    border-top: 1px solid var(--border); padding: 12px;
+    display: flex; flex-direction: column; gap: 8px; background: #fff;
+  }
+
+  .btn {
+    border: none; cursor: pointer; font-family: inherit;
+    border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px;
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    transition: all .15s;
+  }
+  .btn-primary { background: var(--brand-600); color: #fff; box-shadow: 0 4px 12px rgba(108, 79, 232, .3); }
+  .btn-primary:hover { background: var(--brand-700); }
+  .btn-ghost { background: #fff; border: 1px solid var(--border-strong); color: var(--text); }
+  .btn-ghost:hover { background: var(--brand-50); border-color: var(--brand-300); color: var(--brand-700); }
+  .btn-sub { background: var(--brand-50); color: var(--brand-700); font-weight: 500; }
+  .btn-sub:hover { background: var(--brand-100); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .preview { display: flex; flex-direction: column; overflow: hidden; background: var(--bg); }
+  .preview-bar {
+    background: var(--panel); border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .preview-bar .label { font-size: 13px; font-weight: 500; }
+  .preview-bar .spacer { flex: 1; min-width: 12px; }
+
+  .seg {
+    display: inline-flex; align-items: center;
+    background: var(--brand-50); border-radius: 8px; padding: 3px; gap: 2px;
+    flex-wrap: wrap;
+  }
+  .seg button {
+    background: transparent; border: none;
+    padding: 6px 12px; border-radius: 6px;
+    font-size: 12px; cursor: pointer;
+    color: var(--brand-700); font-family: inherit;
+    white-space: nowrap;
+  }
+  .seg button.active { background: var(--brand-600); color: #fff; box-shadow: 0 2px 6px rgba(108, 79, 232, .25); }
+
+  .zoom { display: inline-flex; align-items: center; background: var(--brand-50); border-radius: 8px; padding: 3px; gap: 2px; }
+  .zoom button { background: transparent; border: none; width: 26px; height: 26px; border-radius: 6px; font-size: 14px; cursor: pointer; color: var(--brand-700); font-family: inherit; }
+  .zoom button:hover { background: #fff; }
+  .zoom .val { min-width: 44px; text-align: center; font-size: 12px; font-weight: 600; color: var(--brand-700); }
+  .icon-pill { background: #fff; border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px; color: var(--text-sub); }
+  .icon-pill:hover { color: var(--brand-700); border-color: var(--brand-300); }
+
+  .preview-stage { flex: 1; overflow: auto; padding: 32px; display: flex; justify-content: center; align-items: flex-start; }
+  .preview-stage::-webkit-scrollbar { width: 10px; height: 10px; }
+  .preview-stage::-webkit-scrollbar-thumb { background: #D5CFE8; border-radius: 5px; }
+
+  .poster-scale { transform-origin: top center; transition: transform .15s; }
+  .poster { width: 750px; background: #fff; border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); }
+
+  .poster-banner {
+    position: relative; padding: 36px 40px 32px;
+    overflow: hidden; color: #fff;
+    background: linear-gradient(135deg, #6B4FE8 0%, #9A7FF6 100%);
+    background-size: cover; background-position: center;
+  }
+  .poster-banner.theme-aurora { background: linear-gradient(135deg, #6B4FE8 0%, #16A0C0 100%); }
+  .poster-banner.theme-sunset { background: linear-gradient(135deg, #FF7A45 0%, #FF4081 50%, #6B4FE8 100%); }
+  .poster-banner.theme-mono { background: linear-gradient(135deg, #2D2545 0%, #4A3C6F 100%); }
+
+  .ban-svg { position: absolute; right: -20px; top: 0; bottom: 0; width: 280px; opacity: .35; pointer-events: none; }
+  .ban-stack { display: flex; flex-direction: column; gap: 10px; position: relative; z-index: 2; }
+
+  .ban-block {
+    position: relative; cursor: grab;
+    transition: outline-color .15s;
+    outline: 2px dashed transparent;
+    outline-offset: 4px; border-radius: 6px;
+  }
+  .ban-block:hover { outline-color: rgba(255,255,255,.4); }
+  .ban-block.dragging { opacity: .4; cursor: grabbing; }
+  .ban-block.drag-over { outline-color: rgba(255,255,255,.9); }
+  .ban-block .ce:focus, .ban-block[contenteditable="true"]:focus { outline: 2px solid rgba(255,255,255,.7); outline-offset: 4px; cursor: text; }
+
+  .ban-issue { display: inline-flex; gap: 6px; background: rgba(255,255,255,.18); padding: 5px 12px; border-radius: 999px; font-size: 12px; backdrop-filter: blur(6px); width: fit-content; align-items: center; }
+  .ban-month { font-size: 12px; letter-spacing: 2px; opacity: .9; line-height: 1.1; }
+  .ban-month .num { display: block; font-size: 32px; font-weight: 700; letter-spacing: 0; }
+  .ban-title { font-size: 38px; font-weight: 800; line-height: 1.2; letter-spacing: 1px; }
+  .ban-slogan { font-size: 14px; opacity: .9; }
+  .ban-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .ban-chip {
+    background: rgba(255,255,255,.18); backdrop-filter: blur(6px);
+    border-radius: 6px; padding: 4px 10px;
+    font-size: 11px; font-weight: 500; letter-spacing: 1px;
+    position: relative;
+  }
+  .ban-chip[contenteditable="true"]:focus { background: rgba(255,255,255,.35); outline: none; }
+  .ban-chip .chip-x {
+    display: none; position: absolute;
+    right: -6px; top: -6px; width: 16px; height: 16px;
+    background: rgba(0,0,0,.5); color: #fff; border-radius: 50%;
+    font-size: 10px; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .ban-chip:hover .chip-x { display: flex; }
+  .ban-chip-add {
+    background: rgba(255,255,255,.08); border: 1px dashed rgba(255,255,255,.4);
+    border-radius: 6px; padding: 4px 10px; font-size: 11px;
+    cursor: pointer; color: rgba(255,255,255,.7);
+  }
+  .ban-chip-add:hover { background: rgba(255,255,255,.18); color: #fff; }
+
+  .poster-body { padding: 0; }
+  .group { padding: 28px 36px 24px; border-bottom: 1px solid #F2EFFA; }
+  .group:last-child { border-bottom: none; }
+  .group-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .group-num {
+    width: 32px; height: 32px; border-radius: 9px; color: #fff;
+    font-weight: 700; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--gc); box-shadow: 0 4px 12px var(--gc-soft);
+  }
+  .group-title { font-size: 19px; font-weight: 700; }
+  .group-sub { font-size: 12px; color: var(--text-sub); margin-left: 4px; }
+  .group-bar { flex: 1; height: 1px; background: var(--border); margin-left: 4px; }
+
+  .cards { display: grid; gap: 10px; }
+  .cards.cols-1 { grid-template-columns: 1fr; }
+  .cards.cols-2 { grid-template-columns: 1fr 1fr; }
+  .cards.compact .card { padding: 10px 14px; }
+  .cards.compact .card .c-desc { display: none; }
+
+  .card {
+    background: #FBFAFE; border: 1px solid #ECE9F5;
+    border-radius: 12px; padding: 14px 16px;
+    border-left: 3px solid var(--gc);
+  }
+  .card .c-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; line-height: 1.4; }
+  .card .c-tag { font-size: 10px; padding: 2px 7px; border-radius: 4px; font-weight: 500; flex-shrink: 0; background: var(--gc-soft); color: var(--gc); }
+  .card .c-desc { font-size: 12px; color: var(--text-sub); line-height: 1.6; }
+  .card .c-link { display: inline-flex; align-items: center; gap: 4px; margin-top: 8px; font-size: 11px; text-decoration: none; font-weight: 500; color: var(--gc); }
+
+  .poster-footer { background: #FAF8FE; padding: 16px 36px; text-align: center; color: var(--text-sub); font-size: 11px; letter-spacing: 1px; }
+
+  /* ===== 编辑器（左侧）===== */
+  .gp-card { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; background: #fff; overflow: hidden; }
+  .gp-head { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: var(--gc-soft); border-bottom: 1px solid var(--border); }
+  .gp-handle { cursor: grab; color: var(--text-mute); user-select: none; font-size: 14px; }
+  .gp-handle:active { cursor: grabbing; }
+  .gp-name { flex: 1; font-size: 13px; font-weight: 600; background: transparent; border: 1px dashed transparent; padding: 4px 6px; border-radius: 4px; color: var(--gc); font-family: inherit; min-width: 0; }
+  .gp-name:focus, .gp-name:hover { border-color: var(--gc); background: #fff; outline: none; }
+  .gp-act { background: transparent; border: none; width: 24px; height: 24px; border-radius: 4px; cursor: pointer; color: var(--text-sub); font-size: 12px; }
+  .gp-act:hover { background: rgba(0,0,0,.06); color: var(--text); }
+  .gp-act.danger:hover { color: #E5484D; }
+  .gp-body { padding: 10px; }
+  .gp-sub-input, .gp-slice-url {
+    width: 100%; border: 1px solid var(--border-strong); border-radius: 6px;
+    padding: 5px 8px; font-size: 11px; margin-bottom: 8px;
+    background: #FAFAFC; font-family: inherit;
+  }
+  .gp-sub-input:focus, .gp-slice-url:focus { outline: none; border-color: var(--brand-500); background: #fff; }
+  .gp-color-row { display: flex; gap: 6px; margin-bottom: 8px; align-items: center; font-size: 11px; color: var(--text-mute); }
+  .gp-color-dot { width: 18px; height: 18px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform .1s; }
+  .gp-color-dot.active { border-color: var(--text); transform: scale(1.1); }
+  .gp-color-dot:hover { transform: scale(1.15); }
+  .gp-inject-btn { background: var(--gc); color: #fff; border: none; padding: 5px 10px; border-radius: 5px; font-size: 11px; cursor: pointer; font-family: inherit; margin-bottom: 8px; }
+
+  .editor-item { background: #FAF8FE; border: 1px solid var(--border); border-radius: 6px; padding: 8px; margin-bottom: 6px; position: relative; }
+  .editor-item .del { position: absolute; top: 4px; right: 6px; background: transparent; border: none; color: var(--text-mute); cursor: pointer; font-size: 12px; }
+  .editor-item .del:hover { color: #E5484D; }
+  .field { display: flex; flex-direction: column; gap: 3px; margin-bottom: 6px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label { font-size: 10px; color: var(--text-sub); }
+  .field input, .field textarea, .field select { border: 1px solid var(--border-strong); border-radius: 5px; padding: 5px 7px; font-size: 11px; font-family: inherit; background: #fff; color: var(--text); }
+  .field input:focus, .field textarea:focus, .field select:focus { outline: none; border-color: var(--brand-500); }
+  .field textarea { resize: vertical; min-height: 38px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  .btn-add-mini { background: rgba(0,0,0,.03); color: var(--text-sub); border: 1px dashed var(--border-strong); border-radius: 5px; padding: 5px; width: 100%; font-size: 11px; cursor: pointer; font-family: inherit; }
+  .btn-add-mini:hover { color: var(--gc); border-color: var(--gc); }
+  .btn-add-group { width: 100%; background: var(--brand-50); border: 1px dashed var(--brand-300); color: var(--brand-700); border-radius: var(--radius-sm); padding: 10px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; margin-top: 4px; }
+  .btn-add-group:hover { background: var(--brand-100); }
+  .btn-add-group:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* 弹层 */
+  .modal-mask { position: fixed; inset: 0; background: rgba(20, 10, 60, .35); display: none; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(4px); }
+  .modal-mask.open { display: flex; }
+  .modal { background: #fff; border-radius: 16px; width: 600px; max-width: 90vw; max-height: 85vh; overflow: hidden; box-shadow: var(--shadow-lg); display: flex; flex-direction: column; }
+  .modal-head { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+  .modal-head h3 { font-size: 15px; font-weight: 600; }
+  .modal-head .close { background: transparent; border: none; cursor: pointer; font-size: 18px; color: var(--text-mute); }
+  .modal-body { padding: 18px 20px; overflow-y: auto; }
+  .modal-foot { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
+  .tabs button { background: transparent; border: none; padding: 8px 14px; font-size: 13px; font-family: inherit; color: var(--text-sub); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tabs button.active { color: var(--brand-700); border-bottom-color: var(--brand-600); font-weight: 600; }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+  .code-box { background: #1E1B33; color: #E8E4F8; border-radius: 8px; padding: 14px; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 11px; line-height: 1.6; max-height: 320px; overflow: auto; white-space: pre-wrap; word-break: break-all; }
+
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--text); color: #fff; padding: 10px 18px; border-radius: 8px; font-size: 13px; z-index: 200; opacity: 0; transition: opacity .2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .empty-tip { font-size: 11px; color: var(--text-mute); text-align: center; padding: 6px 0; }
+
+  .ban-tip { position: absolute; top: 8px; left: 8px; background: rgba(0,0,0,.55); color: #fff; padding: 4px 10px; border-radius: 999px; font-size: 10px; z-index: 5; pointer-events: none; opacity: 0; transition: opacity .2s; }
+  .poster-banner:hover .ban-tip { opacity: 1; }
+
+  @media (max-width: 1100px) {
+    .app { grid-template-columns: 1fr; height: auto; }
+    body { overflow: auto; }
+    .sidebar { height: auto; }
+    .preview-stage { padding: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">TS</div>
+      <div>
+        <div class="title">上新小报生成器 v3</div>
+        <div class="sub">Teamspace · 月度</div>
+      </div>
+      <button class="icon-btn" title="重置" onclick="resetState()">↻</button>
+    </div>
+
+    <nav class="nav">
+      <div class="nav-item open" data-key="content">
+        <div class="nav-head" onclick="toggleNav(this)">
+          <div class="lt">
+            <span>📋</span> 内容列表
+            <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:var(--brand-50);color:var(--brand-600);font-weight:600;" id="badge-groups">0</span>
+          </div>
+          <span class="arrow">▶</span>
+        </div>
+        <div class="nav-body">
+          <div id="groups-list"></div>
+          <button class="btn-add-group" id="btn-add-group" onclick="addGroup()">+ 添加内容组</button>
+          <div style="font-size:10px;color:var(--text-mute);margin-top:6px;text-align:center;">最多 6 个 · 最少保留 1 个 · 拖动 ⋮⋮ 调整顺序</div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-key="meta">
+        <div class="nav-head" onclick="toggleNav(this)">
+          <div class="lt"><span>🎨</span> 主题信息</div>
+          <span class="arrow">▶</span>
+        </div>
+        <div class="nav-body">
+          <div style="font-size:11px;color:var(--brand-700);background:var(--brand-50);padding:8px 10px;border-radius:6px;margin-bottom:10px;line-height:1.6;">
+            💡 主题信息支持在右侧 Banner 中<b>双击直接编辑</b>，<b>按住拖拽</b>调整顺序。下方表单同步生效。
+          </div>
+          <div class="row2">
+            <div class="field"><label>期号</label><input id="meta-issue" type="text" value="2026 年 5 月刊"></div>
+            <div class="field"><label>月份数字</label><input id="meta-month" type="text" value="05"></div>
+          </div>
+          <div class="field"><label>主标题</label><input id="meta-title" type="text" value="新内容，新工具"></div>
+          <div class="field"><label>副标语</label><input id="meta-slogan" type="text" value="Teamspace 秘书知识库 · 本月上新"></div>
+          <div class="field"><label>Keywords（用 / 分隔）</label><input id="meta-keywords" type="text" value="MAY/初夏上新"></div>
+          <div class="field"><label>Logo 标签（用 / 分隔，最多 3 个）</label><input id="meta-logos" type="text" value="TEAMSPACE/秘书知识库"></div>
+          <div class="field"><label>页脚文案</label><input id="meta-footer" type="text" value="Teamspace · 秘书知识库 · 让信息触手可达"></div>
+          <div class="field"><label>📊 腾讯文档数据源链接<span style="color:var(--text-sub); font-weight:400;">（仅团队内部维护，不显示在小报上）</span></label><input id="meta-docSource" type="text" placeholder="https://docs.qq.com/sheet/..."></div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-key="size">
+        <div class="nav-head" onclick="toggleNav(this)">
+          <div class="lt"><span>📐</span> 海报尺寸</div>
+          <span class="arrow">▶</span>
+        </div>
+        <div class="nav-body">
+          <div class="field"><label>宽度（px）</label>
+            <select id="meta-width">
+              <option value="750">手机邮件 · 750px</option>
+              <option value="900">中等 · 900px</option>
+              <option value="1080">大图 · 1080px</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-key="layout">
+        <div class="nav-head" onclick="toggleNav(this)">
+          <div class="lt"><span>🗂</span> 布局模式</div>
+          <span class="arrow">▶</span>
+        </div>
+        <div class="nav-body">
+          <div class="field"><label>卡片布局</label>
+            <select id="meta-layout">
+              <option value="cols-1">单列长卡</option>
+              <option value="cols-2" selected>双列网格</option>
+              <option value="cols-2 compact">紧凑双列</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav-item" data-key="banner">
+        <div class="nav-head" onclick="toggleNav(this)">
+          <div class="lt"><span>🖼</span> Banner 与主题</div>
+          <span class="arrow">▶</span>
+        </div>
+        <div class="nav-body">
+          <div class="field"><label>头图主题</label>
+            <select id="meta-theme">
+              <option value="">默认（紫色渐变）</option>
+              <option value="theme-aurora">极光（紫-青）</option>
+              <option value="theme-sunset">日落（橙-紫）</option>
+              <option value="theme-mono">深空（深紫）</option>
+            </select>
+          </div>
+          <div class="field"><label>头图装饰</label>
+            <select id="meta-pattern">
+              <option value="circles">流动圆环</option>
+              <option value="grid">网格星点</option>
+              <option value="waves">浪线</option>
+              <option value="none">无</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>导入主题模板图（jpg/png，图作为 Banner 背景）</label>
+            <div class="btn-row">
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="document.getElementById('file-bgimg').click()">📁 上传</button>
+              <button class="btn btn-ghost" style="padding:6px 10px;font-size:12px;" onclick="clearBgImage()">🗑 清除</button>
+            </div>
+            <div id="bgimg-status" style="font-size:10px;color:var(--text-mute);margin-top:4px;">未上传</div>
+          </div>
+          <input type="file" id="file-bgimg" accept="image/*" style="display:none;" onchange="handleBgImage(event)">
+        </div>
+      </div>
+
+      <div class="nav-item" data-key="template">
+        <div class="nav-head" onclick="toggleNav(this)">
+          <div class="lt"><span>📦</span> 模板管理</div>
+          <span class="arrow">▶</span>
+        </div>
+        <div class="nav-body">
+          <div class="btn-row">
+            <button class="btn btn-ghost" onclick="saveDraft()">💾 保存草稿</button>
+            <button class="btn btn-ghost" onclick="openDraftList()">📂 历史草稿</button>
+          </div>
+          <div style="margin-top:8px;"><button class="btn btn-ghost" style="width:100%;" onclick="exportJSON()">⬇ 导出 JSON 备份</button></div>
+          <div style="margin-top:8px;"><button class="btn btn-ghost" style="width:100%;" onclick="document.getElementById('file-import').click()">⬆ 导入 JSON</button></div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="btn btn-primary" onclick="openEmailCode()">📧 导出邮件代码</button>
+      <div class="btn-row">
+        <button class="btn btn-sub" onclick="exportFull()">🖼 完整海报</button>
+        <button class="btn btn-sub" onclick="exportSlices()">✂️ 图片切片</button>
+      </div>
+    </div>
+  </aside>
+
+  <main class="preview">
+    <div class="preview-bar">
+      <div class="label">海报实时预览</div>
+      <div class="seg" id="seg-mode"></div>
+      <div class="spacer"></div>
+      <div class="zoom">
+        <button onclick="zoom(-10)">−</button>
+        <div class="val" id="zoom-val">80%</div>
+        <button onclick="zoom(10)">+</button>
+      </div>
+      <button class="icon-pill" onclick="zoomFit()">适应</button>
+      <button class="icon-pill" onclick="renderPoster()">↻ 刷新</button>
+    </div>
+
+    <div class="preview-stage" id="stage">
+      <div class="poster-scale" id="poster-scale">
+        <div id="poster" class="poster" data-slice="all"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- 注入弹窗 -->
+<div class="modal-mask" id="modal-inject">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>注入数据 · <span id="inject-target">内容组</span></h3>
+      <button class="close" onclick="closeModal('modal-inject')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tabs" id="inject-tabs">
+        <button class="active" data-tab="csv" onclick="switchTab('inject', 'csv')">粘贴 CSV/TSV</button>
+        <button data-tab="doc" onclick="switchTab('inject', 'doc')">从腾讯文档</button>
+        <button data-tab="manual" onclick="switchTab('inject', 'manual')">手动添加</button>
+      </div>
+      <div class="tab-panel active" id="inject-csv">
+        <div style="font-size:12px; color:var(--text-sub); margin-bottom:8px; line-height:1.6;">
+          从腾讯文档复制行 → 粘贴下方。系统按制表符（Tab）或逗号分隔字段。<br>
+          <b>列顺序：标题 / 链接 / [可选]标签</b>。或粘贴含表头的范围，自动识别"当月需刷新内容/链接/当月是否已上新"列。
+        </div>
+        <div class="field"><textarea id="inject-csv-text" placeholder="助理礼仪规范 V2.0	https://docs.qq.com/doc/xxx	更新" style="min-height:140px;font-family:'SF Mono',Menlo,monospace;font-size:11px;"></textarea></div>
+        <div class="btn-row" style="grid-template-columns: 1fr 1fr 1fr;">
+          <button class="btn btn-ghost" onclick="parseCSV('append')">追加</button>
+          <button class="btn btn-ghost" onclick="parseCSV('replace')">替换</button>
+          <button class="btn btn-primary" onclick="parseCSV('preview')">先预览</button>
+        </div>
+        <div id="csv-preview" style="margin-top:12px; font-size:12px;"></div>
+      </div>
+      <div class="tab-panel" id="inject-doc">
+        <div style="background:var(--brand-50); border:1px solid var(--brand-100); border-radius:12px; padding:18px;">
+          <div style="font-size:13px; font-weight:600; color:var(--brand-700); margin-bottom:14px; line-height:1.4;">
+            💡 自动拉取还在路上，3 步搞定手动导入
+          </div>
+          <div style="display:flex; flex-direction:column; gap:10px; font-size:12px; color:var(--text); line-height:1.6;">
+            <div style="display:flex; align-items:flex-start; gap:10px;">
+              <span style="flex-shrink:0; width:22px; height:22px; border-radius:50%; background:var(--brand-500); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">1</span>
+              <span>在腾讯文档中选中要导入的"已上新"行</span>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:10px;">
+              <span style="flex-shrink:0; width:22px; height:22px; border-radius:50%; background:var(--brand-500); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">2</span>
+              <span>⌘C / Ctrl+C 复制</span>
+            </div>
+            <div style="display:flex; align-items:flex-start; gap:10px;">
+              <span style="flex-shrink:0; width:22px; height:22px; border-radius:50%; background:var(--brand-500); color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">3</span>
+              <span>点下面按钮，切到「粘贴 CSV/TSV」Tab 粘贴</span>
+            </div>
+          </div>
+          <div style="margin-top:16px;">
+            <button class="btn btn-primary" style="width:100%;" onclick="switchTab('inject', 'csv')">跳到 CSV 粘贴 →</button>
+          </div>
+        </div>
+        <div style="margin-top:12px; font-size:11px; color:var(--text-sub); text-align:center;">
+          📌 数据源链接已在左侧「主题信息」中维护
+        </div>
+      </div>
+      <div class="tab-panel" id="inject-manual">
+        <div style="font-size:13px; color:var(--text-sub); padding:20px 0; text-align:center;">关闭弹窗，直接在左侧内容组里点击"+ 添加条目"即可。</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 邮件代码弹窗 -->
+<div class="modal-mask" id="modal-email">
+  <div class="modal" style="width:720px;">
+    <div class="modal-head">
+      <h3>导出邮件代码</h3>
+      <button class="close" onclick="closeModal('modal-email')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="tabs" id="email-tabs">
+        <button class="active" data-tab="full" onclick="switchTab('email', 'full');renderEmailCode()">完整版（1 张图）</button>
+        <button data-tab="slices" onclick="switchTab('email', 'slices');renderEmailCode()">切片版（N 张图）</button>
+      </div>
+      <div style="background:var(--brand-50); border-radius:8px; padding:12px; margin-bottom:14px; font-size:12px; color:var(--brand-700); line-height:1.6;">
+        💡 使用流程：<br>
+        1. 先点「完整海报」「图片切片」导出 PNG<br>
+        2. 上传到企微/腾讯邮箱/图床取图链<br>
+        3. 把下方 <code>REPLACE_ME_XXX</code> 替换为图链<br>
+        4. 把替换好的 HTML 粘贴到邮件富文本编辑器
+      </div>
+      <div class="code-box" id="email-code"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModal('modal-email')">取消</button>
+      <button class="btn btn-primary" onclick="copyEmailCode()">📋 复制全部</button>
+    </div>
+  </div>
+</div>
+
+<!-- 草稿列表 -->
+<div class="modal-mask" id="modal-drafts">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>历史草稿</h3>
+      <button class="close" onclick="closeModal('modal-drafts')">✕</button>
+    </div>
+    <div class="modal-body" id="drafts-list"></div>
+  </div>
+</div>
+
+<input type="file" id="file-import" accept=".json" style="display:none;" onchange="handleImport(event)">
+<div class="toast" id="toast"></div>
+
+<script>
+const GROUP_COLORS = [
+  { id: 1, name: '紫', hex: '#6B4FE8' },
+  { id: 2, name: '青', hex: '#16A0C0' },
+  { id: 3, name: '橙', hex: '#FF7A45' },
+  { id: 4, name: '粉', hex: '#E83E8C' },
+  { id: 5, name: '绿', hex: '#16A085' },
+  { id: 6, name: '黄', hex: '#F39C12' }
+];
+const MAX_GROUPS = 6;
+const DEFAULT_BAN_ORDER = ['issue','month','title','slogan','keywords','logos'];
+function uid() { return 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); }
+
+const DEFAULT_STATE = () => ({
+  meta: {
+    issue: '2026 年 5 月刊', month: '05',
+    title: '新内容，新工具', slogan: 'Teamspace 秘书知识库 · 本月上新',
+    keywords: 'MAY/初夏上新', logos: 'TEAMSPACE/秘书知识库',
+    footer: 'Teamspace · 秘书知识库 · 让信息触手可达',
+    width: '750', layout: 'cols-2', theme: '', pattern: 'circles',
+    bannerImage: '', banOrder: DEFAULT_BAN_ORDER.slice(),
+    docSource: ''
+  },
+  groups: [
+    { id: uid(), name: '近期新内容', subtitle: '本月新增/更新内容', colorId: 1, sliceUrl: '', items: [
+      { title: '《助理礼仪规范 V2.0》', tag: '更新', desc: '更新接待流程与商务用语，新增 12 个常用场景示例。', link: 'https://example.com/1' },
+      { title: '行政费用报销操作指引', tag: '新增', desc: '覆盖 OA 提报、发票存档、月度归档全流程。', link: 'https://example.com/2' }
+    ]},
+    { id: uid(), name: 'AI 专区上新', subtitle: 'AI 专区精选', colorId: 2, sliceUrl: '', items: [
+      { title: '会议纪要 AI 助手', tag: '新上线', desc: '上传录音/转写，一键生成结构化纪要与待办。', link: 'https://example.com/ai1' }
+    ]},
+    { id: uid(), name: 'Teamspace 新鲜事', subtitle: '功能体验升级', colorId: 3, sliceUrl: '', items: [
+      { title: '首页卡片化改版', tag: '已上线', desc: '高频入口聚合，常用工具一屏触达。', link: 'https://example.com/f1' }
+    ]}
+  ]
+});
+
+let STATE = DEFAULT_STATE();
+let ZOOM = 80;
+let MODE = 'all';
+let INJECT_TARGET_GID = null;
+let DRAG_GROUP_ID = null;
+let DRAG_BAN_KEY = null;
+
+// 兼容旧 schema：缺失字段补默认值（v1.2 新增 docSource）
+function normalizeState(obj) {
+  if (!obj || typeof obj !== 'object') return DEFAULT_STATE();
+  const def = DEFAULT_STATE();
+  const meta = Object.assign({}, def.meta, obj.meta || {});
+  return { meta, groups: Array.isArray(obj.groups) ? obj.groups : def.groups };
+}
+
+function $(id) { return document.getElementById(id); }
+function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function toast(msg, dur=2000) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove('show'), dur);
+}
+function colorOf(colorId) { return GROUP_COLORS.find(c => c.id === colorId) || GROUP_COLORS[0]; }
+function findGroup(id) { return STATE.groups.find(g => g.id === id); }
+function findGroupIdx(id) { return STATE.groups.findIndex(g => g.id === id); }
+
+function bannerPatternSVG(kind) {
+  const svgs = {
+    circles: `<svg class="ban-svg" viewBox="0 0 280 200" xmlns="http://www.w3.org/2000/svg"><circle cx="220" cy="60" r="80" fill="none" stroke="#fff" stroke-width="1.5" opacity=".5"/><circle cx="220" cy="60" r="50" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/><circle cx="220" cy="60" r="20" fill="#fff" opacity=".6"/><circle cx="120" cy="160" r="40" fill="none" stroke="#fff" stroke-width="1" opacity=".4"/><circle cx="60" cy="40" r="6" fill="#fff" opacity=".5"/><circle cx="180" cy="170" r="4" fill="#fff" opacity=".6"/></svg>`,
+    grid: `<svg class="ban-svg" viewBox="0 0 280 200" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="gp" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1.5" fill="#fff" opacity=".5"/></pattern></defs><rect width="280" height="200" fill="url(#gp)"/></svg>`,
+    waves: `<svg class="ban-svg" viewBox="0 0 280 200" xmlns="http://www.w3.org/2000/svg"><path d="M 0 60 Q 70 20, 140 60 T 280 60" fill="none" stroke="#fff" stroke-width="1.5" opacity=".5"/><path d="M 0 100 Q 70 60, 140 100 T 280 100" fill="none" stroke="#fff" stroke-width="1.5" opacity=".6"/><path d="M 0 140 Q 70 100, 140 140 T 280 140" fill="none" stroke="#fff" stroke-width="1.5" opacity=".7"/><path d="M 0 180 Q 70 140, 140 180 T 280 180" fill="none" stroke="#fff" stroke-width="1.5" opacity=".8"/></svg>`,
+    none: ''
+  };
+  return svgs[kind] || svgs.circles;
+}
+
+/* ============ Banner block ============ */
+function renderBanBlock(key) {
+  const m = STATE.meta;
+  switch(key) {
+    case 'issue':
+      return `<div class="ban-block ban-issue" draggable="true" data-key="issue"><span>📅</span><span contenteditable="true" data-field="issue" class="ce">${escapeHtml(m.issue)}</span></div>`;
+    case 'month':
+      return `<div class="ban-block ban-month" draggable="true" data-key="month"><span class="num" contenteditable="true" data-field="month">${escapeHtml(m.month)}</span><span style="opacity:.85;letter-spacing:2px;font-size:12px;">月份</span></div>`;
+    case 'title':
+      return `<div class="ban-block ban-title" draggable="true" data-key="title" contenteditable="true" data-field="title">${escapeHtml(m.title)}</div>`;
+    case 'slogan':
+      return `<div class="ban-block ban-slogan" draggable="true" data-key="slogan" contenteditable="true" data-field="slogan">${escapeHtml(m.slogan)}</div>`;
+    case 'keywords': {
+      const arr = (m.keywords||'').split('/').map(s=>s.trim()).filter(Boolean);
+      return `<div class="ban-block ban-chips" draggable="true" data-key="keywords">
+        ${arr.map((k,i)=>`<span class="ban-chip" contenteditable="true" data-arr="keywords" data-idx="${i}">${escapeHtml(k)}<span class="chip-x" onclick="event.stopPropagation();delChip('keywords',${i})">×</span></span>`).join('')}
+        <span class="ban-chip-add" onclick="event.stopPropagation();addChip('keywords')">+ 关键词</span>
+      </div>`;
+    }
+    case 'logos': {
+      const arr = (m.logos||'').split('/').map(s=>s.trim()).filter(Boolean).slice(0,3);
+      return `<div class="ban-block ban-chips" draggable="true" data-key="logos">
+        ${arr.map((k,i)=>`<span class="ban-chip" contenteditable="true" data-arr="logos" data-idx="${i}">${escapeHtml(k)}<span class="chip-x" onclick="event.stopPropagation();delChip('logos',${i})">×</span></span>`).join('')}
+        ${arr.length < 3 ? `<span class="ban-chip-add" onclick="event.stopPropagation();addChip('logos')">+ Logo</span>` : ''}
+      </div>`;
+    }
+    default: return '';
+  }
+}
+
+function renderBanner() {
+  const m = STATE.meta;
+  const order = (m.banOrder && m.banOrder.length) ? m.banOrder.slice() : DEFAULT_BAN_ORDER.slice();
+  DEFAULT_BAN_ORDER.forEach(k => { if (!order.includes(k)) order.push(k); });
+
+  const bgStyle = m.bannerImage
+    ? `style="background-image:linear-gradient(135deg, rgba(45,30,90,.55), rgba(20,10,50,.4)), url('${m.bannerImage}');"`
+    : '';
+
+  return `
+    <div class="poster-banner ${m.theme} ${m.bannerImage ? 'has-bgimg' : ''}" ${bgStyle}>
+      ${m.bannerImage ? '' : bannerPatternSVG(m.pattern)}
+      <div class="ban-tip">💡 双击编辑文字 · 拖拽调整顺序</div>
+      <div class="ban-stack" id="ban-stack">
+        ${order.map(k => renderBanBlock(k)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderGroup(g) {
+  const c = colorOf(g.colorId);
+  const idx = STATE.groups.indexOf(g);
+  return `
+    <section class="group gc-${g.colorId}" data-slice-id="${g.id}" style="--gc:${c.hex};">
+      <div class="group-head">
+        <div class="group-num">${idx + 1}</div>
+        <div class="group-title">${escapeHtml(g.name)}</div>
+        <div class="group-sub">${escapeHtml(g.subtitle||'')}</div>
+        <div class="group-bar"></div>
+      </div>
+      ${g.items.length ? `
+      <div class="cards ${STATE.meta.layout}">
+        ${g.items.map(it => `
+          <div class="card">
+            <div class="c-title">
+              <span>${escapeHtml(it.title)}</span>
+              ${it.tag ? `<span class="c-tag">${escapeHtml(it.tag)}</span>` : ''}
+            </div>
+            ${it.desc ? `<div class="c-desc">${escapeHtml(it.desc)}</div>` : ''}
+            ${it.link ? `<a class="c-link" href="${escapeHtml(it.link)}" target="_blank">查看详情 →</a>` : ''}
+          </div>
+        `).join('')}
+      </div>` : `<div style="padding:16px;color:var(--text-mute);font-size:12px;text-align:center;background:#FAFAFC;border-radius:8px;">本组暂无条目</div>`}
+    </section>
+  `;
+}
+
+function renderPoster() {
+  const m = STATE.meta;
+  const banner = renderBanner();
+  const body = STATE.groups.map(renderGroup).join('');
+  const footer = `<div class="poster-footer">${escapeHtml(m.footer)}</div>`;
+  $('poster').style.width = m.width + 'px';
+  $('poster').innerHTML = banner + `<div class="poster-body">${body}</div>` + footer;
+  applyMode();
+  attachBannerHandlers();
+}
+
+function applyMode() {
+  const p = $('poster');
+  if (MODE === 'all') {
+    p.dataset.slice = 'all';
+    p.querySelectorAll('.group').forEach(el => { el.style.display = 'block'; });
+  } else {
+    p.dataset.slice = MODE;
+    p.querySelectorAll('.group').forEach(el => {
+      el.style.display = (el.dataset.sliceId === MODE) ? 'block' : 'none';
+    });
+  }
+}
+
+function setMode(mode) {
+  MODE = mode;
+  document.querySelectorAll('#seg-mode button').forEach(b => {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  applyMode();
+}
+
+function renderModeTabs() {
+  const seg = $('seg-mode');
+  // 检查当前 MODE 对应 group 是否还存在
+  if (MODE !== 'all' && !findGroup(MODE)) MODE = 'all';
+  seg.innerHTML = `<button class="${MODE==='all'?'active':''}" data-mode="all" onclick="setMode('all')">完整</button>` +
+    STATE.groups.map((g, i) => `<button class="${MODE===g.id?'active':''}" data-mode="${g.id}" onclick="setMode('${g.id}')">切片${i+1}</button>`).join('');
+}
+
+/* ============ Banner 交互 ============ */
+function attachBannerHandlers() {
+  $('poster').querySelectorAll('[contenteditable="true"]').forEach(el => {
+    el.addEventListener('blur', e => {
+      const t = e.target;
+      if (t.dataset.field) {
+        STATE.meta[t.dataset.field] = t.innerText.trim();
+        bindMetaInputs();
+      } else if (t.dataset.arr) {
+        const arr = STATE.meta[t.dataset.arr].split('/').map(s=>s.trim()).filter(Boolean);
+        arr[parseInt(t.dataset.idx,10)] = t.innerText.trim();
+        STATE.meta[t.dataset.arr] = arr.join('/');
+        bindMetaInputs();
+      }
+    });
+    el.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && el.dataset.field !== 'slogan') {
+        e.preventDefault();
+        el.blur();
+      }
+    });
+  });
+
+  $('poster').querySelectorAll('.ban-block').forEach(block => {
+    block.addEventListener('dragstart', e => {
+      // 防止从 contenteditable 内部拖拽时把 block 也拖了
+      if (e.target.getAttribute && e.target.getAttribute('contenteditable') === 'true' && e.target !== block) {
+        e.stopPropagation();
+        e.preventDefault();
+        return;
+      }
+      DRAG_BAN_KEY = block.dataset.key;
+      block.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', DRAG_BAN_KEY); } catch(_) {}
+    });
+    block.addEventListener('dragend', () => {
+      block.classList.remove('dragging');
+      $('poster').querySelectorAll('.ban-block').forEach(b => b.classList.remove('drag-over'));
+      DRAG_BAN_KEY = null;
+    });
+    block.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (block.dataset.key !== DRAG_BAN_KEY) block.classList.add('drag-over');
+    });
+    block.addEventListener('dragleave', () => block.classList.remove('drag-over'));
+    block.addEventListener('drop', e => {
+      e.preventDefault();
+      if (!DRAG_BAN_KEY || block.dataset.key === DRAG_BAN_KEY) return;
+      const order = STATE.meta.banOrder.slice();
+      const from = order.indexOf(DRAG_BAN_KEY);
+      const to = order.indexOf(block.dataset.key);
+      if (from < 0 || to < 0) return;
+      order.splice(from, 1);
+      order.splice(to, 0, DRAG_BAN_KEY);
+      STATE.meta.banOrder = order;
+      renderPoster();
+    });
+  });
+}
+
+function addChip(field) {
+  const arr = (STATE.meta[field]||'').split('/').map(s=>s.trim()).filter(Boolean);
+  if (field === 'logos' && arr.length >= 3) { toast('Logo 标签最多 3 个'); return; }
+  arr.push(field === 'keywords' ? '新关键词' : '标签');
+  STATE.meta[field] = arr.join('/');
+  bindMetaInputs(); renderPoster();
+}
+function delChip(field, idx) {
+  const arr = (STATE.meta[field]||'').split('/').map(s=>s.trim()).filter(Boolean);
+  arr.splice(idx, 1);
+  STATE.meta[field] = arr.join('/');
+  bindMetaInputs(); renderPoster();
+}
+
+/* ============ 编辑器（左侧）============ */
+function renderGroupEditor(g) {
+  return `
+    <div class="gp-card gc-${g.colorId}" data-gid="${g.id}" draggable="true">
+      <div class="gp-head">
+        <span class="gp-handle" data-handle="1">⋮⋮</span>
+        <input class="gp-name" value="${escapeHtml(g.name)}" oninput="updateGroup('${g.id}','name',this.value)">
+        <button class="gp-act" title="复制" onclick="duplicateGroup('${g.id}')">⎘</button>
+        <button class="gp-act danger" title="删除" onclick="delGroup('${g.id}')">✕</button>
+      </div>
+      <div class="gp-body">
+        <input class="gp-sub-input" placeholder="副标题（可选）" value="${escapeHtml(g.subtitle||'')}" oninput="updateGroup('${g.id}','subtitle',this.value)">
+        <div class="gp-color-row">
+          <span>组色：</span>
+          ${GROUP_COLORS.map(c => `<span class="gp-color-dot ${c.id===g.colorId?'active':''}" style="background:${c.hex};" title="${c.name}" onclick="updateGroup('${g.id}','colorId',${c.id})"></span>`).join('')}
+        </div>
+        <input class="gp-slice-url" placeholder="切片跳转 URL（用于邮件按钮链接）" value="${escapeHtml(g.sliceUrl||'')}" oninput="updateGroup('${g.id}','sliceUrl',this.value)">
+        <button class="gp-inject-btn" onclick="openInjection('${g.id}')">⬇ 注入数据到该组</button>
+        <div id="items-${g.id}">
+          ${g.items.length ? g.items.map((it,i)=>`
+            <div class="editor-item">
+              <button class="del" onclick="delItem('${g.id}',${i})">✕</button>
+              <div class="row2">
+                <div class="field"><label>标题</label><input value="${escapeHtml(it.title)}" oninput="updateItem('${g.id}',${i},'title',this.value)"></div>
+                <div class="field"><label>标签</label><input value="${escapeHtml(it.tag||'')}" oninput="updateItem('${g.id}',${i},'tag',this.value)" placeholder="更新/新增"></div>
+              </div>
+              <div class="field"><label>简介</label><textarea oninput="updateItem('${g.id}',${i},'desc',this.value)" maxlength="60">${escapeHtml(it.desc||'')}</textarea></div>
+              <div class="field"><label>链接</label><input value="${escapeHtml(it.link||'')}" oninput="updateItem('${g.id}',${i},'link',this.value)" placeholder="https://"></div>
+            </div>
+          `).join('') : '<div class="empty-tip">暂无条目</div>'}
+        </div>
+        <button class="btn-add-mini" onclick="addItem('${g.id}')">+ 添加条目</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderEditor() {
+  $('groups-list').innerHTML = STATE.groups.map(renderGroupEditor).join('');
+  $('badge-groups').textContent = STATE.groups.length;
+  $('btn-add-group').disabled = STATE.groups.length >= MAX_GROUPS;
+  attachGroupDragHandlers();
+}
+
+/* ============ Group ops ============ */
+function nextColorId() {
+  const used = STATE.groups.map(g => g.colorId);
+  for (const c of GROUP_COLORS) {
+    if (!used.includes(c.id)) return c.id;
+  }
+  return GROUP_COLORS[STATE.groups.length % 6].id;
+}
+
+function addGroup() {
+  if (STATE.groups.length >= MAX_GROUPS) { toast('最多 6 个内容组'); return; }
+  STATE.groups.push({ id: uid(), name: '新内容组', subtitle: '', colorId: nextColorId(), sliceUrl: '', items: [] });
+  renderEditor(); renderModeTabs(); renderPoster();
+  toast('已添加内容组');
+}
+function delGroup(id) {
+  if (STATE.groups.length <= 1) { toast('至少保留 1 个内容组'); return; }
+  const g = findGroup(id);
+  if (!confirm(`确认删除「${g.name}」？该组下 ${g.items.length} 个条目也会被删除。`)) return;
+  STATE.groups = STATE.groups.filter(x => x.id !== id);
+  if (MODE === id) MODE = 'all';
+  renderEditor(); renderModeTabs(); renderPoster();
+  toast('已删除');
+}
+function duplicateGroup(id) {
+  if (STATE.groups.length >= MAX_GROUPS) { toast('最多 6 个内容组'); return; }
+  const g = findGroup(id);
+  const idx = findGroupIdx(id);
+  const copy = JSON.parse(JSON.stringify(g));
+  copy.id = uid();
+  copy.name = g.name + ' 副本';
+  copy.colorId = nextColorId();
+  STATE.groups.splice(idx + 1, 0, copy);
+  renderEditor(); renderModeTabs(); renderPoster();
+}
+function updateGroup(id, field, val) {
+  const g = findGroup(id); if (!g) return;
+  g[field] = val;
+  renderPoster();
+  if (field === 'colorId') renderEditor();
+}
+
+/* ============ Item ops ============ */
+function addItem(gid) { findGroup(gid).items.push({ title:'新条目', tag:'', desc:'', link:'' }); renderEditor(); renderPoster(); }
+function delItem(gid, i) { findGroup(gid).items.splice(i,1); renderEditor(); renderPoster(); }
+function updateItem(gid, i, field, val) { findGroup(gid).items[i][field] = val; renderPoster(); }
+
+/* ============ Group drag-sort ============ */
+function attachGroupDragHandlers() {
+  $('groups-list').querySelectorAll('.gp-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      // 仅允许从 handle 或 head 拖
+      const target = e.target;
+      const fromHandle = target.classList && (target.classList.contains('gp-handle') || target.classList.contains('gp-head'));
+      const insideHandle = target.closest && target.closest('.gp-handle, .gp-head');
+      if (!fromHandle && !insideHandle) {
+        // 如果点的是 input/button/textarea 不允许拖
+        if (target.matches && target.matches('input, button, textarea, select, .gp-color-dot')) {
+          e.preventDefault(); return;
+        }
+      }
+      DRAG_GROUP_ID = card.dataset.gid;
+      card.style.opacity = '.4';
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', DRAG_GROUP_ID); } catch(_) {}
+    });
+    card.addEventListener('dragend', () => {
+      card.style.opacity = '1';
+      DRAG_GROUP_ID = null;
+      $('groups-list').querySelectorAll('.gp-card').forEach(c => c.style.borderColor = '');
+    });
+    card.addEventListener('dragover', e => {
+      e.preventDefault();
+      if (DRAG_GROUP_ID && card.dataset.gid !== DRAG_GROUP_ID) card.style.borderColor = 'var(--brand-500)';
+    });
+    card.addEventListener('dragleave', () => card.style.borderColor = '');
+    card.addEventListener('drop', e => {
+      e.preventDefault();
+      card.style.borderColor = '';
+      if (!DRAG_GROUP_ID || card.dataset.gid === DRAG_GROUP_ID) return;
+      const fromIdx = findGroupIdx(DRAG_GROUP_ID);
+      const toIdx = findGroupIdx(card.dataset.gid);
+      const [g] = STATE.groups.splice(fromIdx, 1);
+      STATE.groups.splice(toIdx, 0, g);
+      renderEditor(); renderModeTabs(); renderPoster();
+    });
+  });
+}
+
+/* ============ Nav ============ */
+function toggleNav(head) { head.parentElement.classList.toggle('open'); }
+
+/* ============ Meta inputs ============ */
+function bindMetaInputs() {
+  Object.keys(STATE.meta).forEach(key => {
+    const el = $('meta-' + key);
+    if (!el) return;
+    if (typeof STATE.meta[key] === 'string') el.value = STATE.meta[key];
+  });
+}
+function attachMetaListeners() {
+  ['issue','month','title','slogan','keywords','logos','footer','width','layout','theme','pattern','docSource'].forEach(key => {
+    const el = $('meta-' + key);
+    if (!el) return;
+    el.addEventListener('input', e => {
+      STATE.meta[key] = e.target.value;
+      renderPoster();
+      if (key === 'width') zoomFit();
+    });
+  });
+}
+
+/* ============ Zoom ============ */
+function applyZoom() {
+  $('poster-scale').style.transform = `scale(${ZOOM/100})`;
+  $('zoom-val').textContent = ZOOM + '%';
+}
+function zoom(delta) { ZOOM = Math.max(30, Math.min(150, ZOOM + delta)); applyZoom(); }
+function zoomFit() {
+  const stage = $('stage');
+  const stageW = stage.clientWidth - 64;
+  const posterW = parseInt(STATE.meta.width, 10);
+  ZOOM = Math.max(30, Math.min(100, Math.floor(stageW / posterW * 100)));
+  applyZoom();
+}
+
+/* ============ BG Image ============ */
+function handleBgImage(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    STATE.meta.bannerImage = reader.result;
+    $('bgimg-status').textContent = `已上传：${f.name}（${(f.size/1024).toFixed(0)} KB）`;
+    renderPoster();
+    toast('主题模板图已应用');
+  };
+  reader.readAsDataURL(f);
+  e.target.value = '';
+}
+function clearBgImage() {
+  STATE.meta.bannerImage = '';
+  $('bgimg-status').textContent = '未上传';
+  renderPoster();
+  toast('已清除模板图');
+}
+
+/* ============ Inject ============ */
+function openInjection(gid) {
+  INJECT_TARGET_GID = gid;
+  const g = findGroup(gid);
+  $('inject-target').textContent = g ? g.name : '内容组';
+  $('inject-csv-text').value = '';
+  $('csv-preview').innerHTML = '';
+  switchTab('inject', 'csv');
+  $('modal-inject').classList.add('open');
+}
+function closeModal(id) { $(id).classList.remove('open'); }
+function switchTab(group, key) {
+  document.querySelectorAll(`#${group}-tabs button`).forEach(b => b.classList.toggle('active', b.dataset.tab === key));
+  document.querySelectorAll(`[id^=${group}-]`).forEach(el => {
+    if (el.id.startsWith(group + '-') && el.classList.contains('tab-panel')) {
+      el.classList.toggle('active', el.id === `${group}-${key}`);
+    }
+  });
+}
+
+function parseCSVText(text) {
+  const lines = text.trim().split(/\r?\n/).filter(Boolean);
+  if (!lines.length) return [];
+  const sep = lines[0].includes('\t') ? '\t' : (lines[0].split(',').length > lines[0].split('\t').length ? ',' : '\t');
+  const rows = lines.map(l => l.split(sep).map(c => c.trim()));
+  const header = rows[0];
+  let titleIdx = -1, linkIdx = -1, updateIdx = -1, tagIdx = -1;
+  header.forEach((h, i) => {
+    const s = h.toLowerCase();
+    if (h.includes('当月需刷新内容') || h.includes('标题') || s === 'title') titleIdx = i;
+    if (h.includes('链接') || s === 'link' || s === 'url') linkIdx = i;
+    if (h.includes('当月是否已上新') || h.includes('是否上新') || h.includes('更新字段')) updateIdx = i;
+    if (h.includes('标签') || h.includes('类型') || s === 'tag') tagIdx = i;
+  });
+  if (titleIdx !== -1 && linkIdx !== -1) {
+    return rows.slice(1).filter(r => updateIdx === -1 || (r[updateIdx]||'').includes('已上新'))
+      .map(r => ({ title: r[titleIdx]||'', link: r[linkIdx]||'', tag: (tagIdx !== -1 ? r[tagIdx] : '')||'更新', desc: '' }))
+      .filter(it => it.title);
+  }
+  return rows.map(r => ({ title: r[0]||'', link: r[1]||'', tag: r[2]||'更新', desc: '' })).filter(it => it.title);
+}
+
+function parseCSV(mode) {
+  const text = $('inject-csv-text').value;
+  const data = parseCSVText(text);
+  if (!data.length) { $('csv-preview').innerHTML = '<div style="color:#E5484D;">未解析到有效条目</div>'; return; }
+  if (mode === 'preview') {
+    $('csv-preview').innerHTML = `<div style="background:var(--brand-50); padding:10px; border-radius:8px;">✅ 解析到 <b>${data.length}</b> 条：<br>${data.slice(0,5).map(d => `• ${escapeHtml(d.title)}`).join('<br>')}${data.length > 5 ? `<br>...还有 ${data.length - 5} 条` : ''}</div>`;
+    return;
+  }
+  const g = findGroup(INJECT_TARGET_GID);
+  if (!g) { toast('目标内容组不存在'); return; }
+  if (mode === 'replace') g.items = data;
+  else g.items = g.items.concat(data);
+  renderEditor(); renderPoster();
+  closeModal('modal-inject');
+  toast(`已${mode === 'replace' ? '替换' : '追加'} ${data.length} 条到「${g.name}」`);
+}
+
+/* ============ Export ============ */
+async function snapshot(name) {
+  const node = $('poster');
+  const oldTransform = $('poster-scale').style.transform;
+  $('poster-scale').style.transform = 'scale(1)';
+  await new Promise(r => setTimeout(r, 100));
+  const canvas = await html2canvas(node, { scale: 2, backgroundColor: '#FFFFFF', useCORS: true, logging: false });
+  $('poster-scale').style.transform = oldTransform;
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = name + '.png';
+  a.click();
+}
+
+function stamp() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+}
+
+function safeName(s) {
+  return (s||'').replace(/[\\/:*?"<>|\s]+/g, '-').slice(0, 20);
+}
+
+async function exportFull() {
+  const prev = MODE;
+  setMode('all');
+  await new Promise(r=>setTimeout(r,150));
+  await snapshot(`teamspace-${stamp()}-full`);
+  setMode(prev);
+  toast('完整海报已导出');
+}
+
+async function exportSlices() {
+  const prev = MODE;
+  for (let i = 0; i < STATE.groups.length; i++) {
+    const g = STATE.groups[i];
+    setMode(g.id);
+    await new Promise(r=>setTimeout(r,150));
+    await snapshot(`teamspace-${stamp()}-slice${i+1}-${safeName(g.name)}`);
+  }
+  setMode(prev);
+  toast(`${STATE.groups.length} 张切片已导出`);
+}
+
+/* ============ Email Code ============ */
+function openEmailCode() {
+  $('modal-email').classList.add('open');
+  renderEmailCode();
+}
+
+function renderEmailCode() {
+  const activeTab = document.querySelector('#email-tabs button.active').dataset.tab;
+  const m = STATE.meta;
+  let html;
+  if (activeTab === 'full') {
+    const firstUrl = (STATE.groups[0] && STATE.groups[0].sliceUrl) || '#';
+    html = `<!-- Teamspace 上新小报 · ${escapeHtml(m.issue)} -->
+<div style="max-width:${m.width}px;margin:0 auto;font-family:-apple-system,'PingFang SC',Arial,sans-serif;">
+  <a href="${escapeHtml(firstUrl)}" style="display:block;text-decoration:none;">
+    <img src="REPLACE_ME_FULL" alt="${escapeHtml(m.title)}" style="display:block;width:100%;height:auto;border:0;" />
+  </a>
+  <div style="text-align:center;color:#999;font-size:12px;padding:8px 0;">
+    ${escapeHtml(m.footer)}
+  </div>
+</div>`;
+  } else {
+    const slices = STATE.groups.map((g, i) => `  <!-- 切片${i+1} ${escapeHtml(g.name)} -->
+  <a href="${escapeHtml(g.sliceUrl || '#')}" style="display:block;text-decoration:none;margin-bottom:12px;">
+    <img src="REPLACE_ME_SLICE_${g.id}" alt="${escapeHtml(g.name)}" style="display:block;width:100%;height:auto;border:0;" />
+  </a>`).join('\n');
+    html = `<!-- Teamspace 上新小报 · 切片版 · ${escapeHtml(m.issue)} -->
+<div style="max-width:${m.width}px;margin:0 auto;font-family:-apple-system,'PingFang SC',Arial,sans-serif;">
+${slices}
+  <div style="text-align:center;color:#999;font-size:12px;padding:8px 0;">
+    ${escapeHtml(m.footer)}
+  </div>
+</div>`;
+  }
+  $('email-code').textContent = html;
+}
+
+function copyEmailCode() {
+  const text = $('email-code').textContent;
+  navigator.clipboard.writeText(text).then(() => toast('已复制到剪贴板')).catch(() => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('已复制到剪贴板');
+  });
+}
+
+/* ============ Drafts ============ */
+function draftKey(month) { return 'ts-poster-v3-draft-' + month; }
+
+function saveDraft() {
+  const m = STATE.meta.issue.match(/(\d{4}).*?(\d{1,2})/);
+  const month = m ? `${m[1]}-${String(m[2]).padStart(2,'0')}` : stamp();
+  localStorage.setItem(draftKey(month), JSON.stringify(STATE));
+  const idx = JSON.parse(localStorage.getItem('ts-poster-v3-drafts-idx') || '[]');
+  if (!idx.includes(month)) {
+    idx.unshift(month);
+    localStorage.setItem('ts-poster-v3-drafts-idx', JSON.stringify(idx));
+  }
+  toast(`已保存草稿（${month}）`);
+}
+
+function openDraftList() {
+  const idx = JSON.parse(localStorage.getItem('ts-poster-v3-drafts-idx') || '[]');
+  const box = $('drafts-list');
+  if (!idx.length) {
+    box.innerHTML = '<div class="empty-tip" style="padding:30px 0;">暂无历史草稿</div>';
+  } else {
+    box.innerHTML = idx.map(month => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#FAF8FE;border:1px solid var(--border);border-radius:8px;margin-bottom:8px;">
+        <div>
+          <div style="font-weight:600;font-size:13px;">${month}</div>
+          <div style="font-size:11px;color:var(--text-mute);">草稿</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-sub" style="padding:6px 12px;font-size:12px;" onclick="loadDraft('${month}')">读取</button>
+          <button class="btn btn-ghost" style="padding:6px 12px;font-size:12px;" onclick="delDraft('${month}')">删除</button>
+        </div>
+      </div>
+    `).join('');
+  }
+  $('modal-drafts').classList.add('open');
+}
+
+function loadDraft(month) {
+  const raw = localStorage.getItem(draftKey(month));
+  if (!raw) return toast('草稿不存在');
+  STATE = normalizeState(JSON.parse(raw));
+  bindMetaInputs(); renderEditor(); renderModeTabs(); renderPoster();
+  closeModal('modal-drafts');
+  toast(`已载入草稿（${month}）`);
+}
+
+function delDraft(month) {
+  if (!confirm(`删除 ${month} 的草稿？`)) return;
+  localStorage.removeItem(draftKey(month));
+  const idx = JSON.parse(localStorage.getItem('ts-poster-v3-drafts-idx') || '[]').filter(x => x !== month);
+  localStorage.setItem('ts-poster-v3-drafts-idx', JSON.stringify(idx));
+  openDraftList();
+  toast('已删除');
+}
+
+function exportJSON() {
+  const blob = new Blob([JSON.stringify(STATE, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `teamspace-poster-v3-${stamp()}.json`;
+  a.click();
+  toast('已导出 JSON');
+}
+
+function handleImport(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const obj = JSON.parse(reader.result);
+      // 兼容性校验
+      if (!obj.meta || !Array.isArray(obj.groups)) {
+        toast('文件结构不符（需 meta + groups）');
+        return;
+      }
+      STATE = normalizeState(obj);
+      bindMetaInputs(); renderEditor(); renderModeTabs(); renderPoster();
+      $('bgimg-status').textContent = STATE.meta.bannerImage ? '已加载（来自 JSON）' : '未上传';
+      toast('已导入 JSON');
+    } catch (err) {
+      toast('文件解析失败');
+    }
+  };
+  reader.readAsText(f);
+  e.target.value = '';
+}
+
+function resetState() {
+  if (!confirm('重置所有数据为示例值？（不影响已保存的草稿）')) return;
+  STATE = DEFAULT_STATE();
+  MODE = 'all';
+  bindMetaInputs(); renderEditor(); renderModeTabs(); renderPoster();
+  $('bgimg-status').textContent = '未上传';
+  toast('已重置');
+}
+
+/* ============ Init ============ */
+function init() {
+  bindMetaInputs();
+  attachMetaListeners();
+  renderEditor();
+  renderModeTabs();
+  renderPoster();
+  zoomFit();
+  window.addEventListener('resize', zoomFit);
+}
+init();
+</script>
+</body>
+</html>

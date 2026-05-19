@@ -1,0 +1,30 @@
+# 系统/IDE
+.DS_Store
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# WorkBuddy 内部工作目录
+.workbuddy/
+
+# OA 内部部署注册表
+.page-deliver-registry.json
+
+# OA 内部部署目录（含 node_modules、容器部署元数据、内部业务逻辑）
+teamspace-poster-20260518-200007/
+teamspace-poster-v2.html
+teamspace-poster-v3.html
+teamspace-poster.html
+
+# 内部 PRD（含 ADR / 决策路径 / 业务背景）
+PRD-teamspace-poster.md
+
+# 内部技术文档（OpenAPI 接入指南含合规细节）
+docs/tencent-docs-openapi-onboarding.md
+
+# 临时文件
+*.log
+*.tmp
+*.zip
+/tmp/
