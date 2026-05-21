@@ -4,9 +4,9 @@
 
 ## 在线访问
 
-- **公网版（EdgeOne Pages）**：https://teamspace-poster-tqkcq8qk0j.edgeone.cool
+- **公网版（EdgeOne Pages）**：https://teamspace-poster-z6v3clhr.edgeone.cool
   - 司外、家里、手机 4G 都能直接打开，无需 VPN 或 OA 登录
-  - ⚠️ 首次部署后如果不带 token 报 401，需在 EdgeOne 控制台把项目设为「公开」
+  - ⚠️ 首次部署后如果不带 token 报 401，需在 EdgeOne 控制台「项目设置」关闭访问鉴权
 - **司内版（OA 认证）**：https://hrai.prod.hrainative.woa.com/codebuddy-app-detail/teamspace-poster-20260518-200007
   - 适合 WXG 员工司内访问，免登录（SSO 自动透传）
 
