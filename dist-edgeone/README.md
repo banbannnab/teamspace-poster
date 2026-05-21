@@ -1,12 +1,14 @@
-# Teamspace 上新小报生成器 — EdgeOne Pages 公网版
+# Teamspace 上新小报生成器 — 公网版
 
 > WXG HR 秘书知识库内部工具的公网版本。司外/家里/不挂 VPN 也能访问。
 
 ## 在线访问
 
-- **公网版（EdgeOne Pages）**：https://teamspace-poster-z6v3clhr.edgeone.cool
-  - 司外、家里、手机 4G 都能直接打开，无需 VPN 或 OA 登录
-  - ⚠️ 首次部署后如果不带 token 报 401，需在 EdgeOne 控制台「项目设置」关闭访问鉴权
+- **公网版（Cloudflare Pages）**：https://teamspace-poster.pages.dev
+  - 全球 CDN，司外、家里、手机 4G 都能直接打开，无需 VPN 或 OA 登录
+  - 后续 GitHub push 后自动重新部署
+- **公网版（EdgeOne Pages，备用）**：https://teamspace-poster-z6v3clhr.edgeone.cool
+  - ⚠️ 国内访问可能有 401 问题
 - **司内版（OA 认证）**：https://hrai.prod.hrainative.woa.com/codebuddy-app-detail/teamspace-poster-20260518-200007
   - 适合 WXG 员工司内访问，免登录（SSO 自动透传）
 
